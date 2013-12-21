@@ -1,4 +1,46 @@
 from math import *
+from collections import defaultdict
+from operator import mul
+
+def factorize(n):
+    result = []
+
+    while n % 2 == 0:
+        result.append(2)
+        n /= 2
+
+    p = 3
+    max = sqrt(n)
+    while p <= max:
+        if n % p == 0:
+            result.append(p)
+            n /= p
+            max = sqrt(n)
+        else:
+            p += 2
+
+    # optimization for prime n
+    if n != 1:
+        result.append(n)
+
+    return result
+
+def numDivisors(n):
+    primes = factorize(n)
+    histogram = defaultdict(int)
+    for factor in primes:
+        histogram[factor] += 1
+    return reduce(mul, [exponent + 1 for exponent in list(histogram.values())])
+
+def isPrime(num):
+    if num == 2 or num == 3:
+        return True
+    if num % 2 == 0:
+        return False
+    if num % 3 == 0:
+        return False
+
+    return numDivisors(num) == 2
 
 class _AbstractPrimeTest:
     def isPrime(self, n):
@@ -89,13 +131,13 @@ class _SundaramPrimeTest(_AbstractPrimeTest):
         return [2] + [2 * half + 1 for half in self._halves if 2 * half + 1 <= max]
 
     def _generateHalves(self, half):
-        print "generating", half
-        self._halvesSet = set(range(1, half + 1))
-        for i in range(1, half):
-            for j in range(i, half):
+        halves = [True for i in xrange(half + 1)]
+        for i in xrange(1, half + 1):
+            for j in xrange(i, (half - i) / (2 * i + 1) + 1):
                 if i + j + 2 * i * j <= half:
-                    self._halvesSet.discard(i + j + 2 * i * j)
-        self._halves = sorted(self._halvesSet)        
+                    halves[i + j + 2 * i * j - 1] = False
+        self._halves = [p for p in range(1, half + 1) if halves[p - 1]]
+        self._halvesSet = set(self._halves)
 
 def getPrimeTest(type):
     if type == 'eratosthenes':
