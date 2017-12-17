@@ -1,147 +1,142 @@
-from math import *
-from collections import defaultdict
-from operator import mul
+from math import sqrt
+from collections import defaultdict, Counter
+from functools import wraps
+from itertools import repeat
 
-def factorize(n):
-    result = []
+PRIMES_100 = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
 
-    while n % 2 == 0:
-        result.append(2)
-        n /= 2
+def product(vals):
+    return reduce(lambda x, y: x * y, vals)
 
-    p = 3
-    max = sqrt(n)
-    while p <= max:
-        if n % p == 0:
+def palindrome(num):
+    return str(num) == str(num)[::-1]
+
+def memoize(fn):
+    memo = {}
+    
+    @wraps(fn)
+    def wrapper(*n):
+        if n not in memo:
+            memo[n] = fn(*n)
+        return memo[n]
+    
+    return wrapper
+
+def divisors(n):
+    for i in range(1, n):
+        if n % i == 0:
+            yield i
+
+def _factorize():
+    cache = {}
+    def factorize(n):
+        result = []
+        bound = sqrt(n)
+        for p in PRIMES_100:
+            if p > bound:
+                break
+            while n % p == 0:
+                result.append(p)
+                n /= p
+        p = 101
+        while n in cache:
+            p = cache[n]
             result.append(p)
             n /= p
-            max = sqrt(n)
-        else:
+
+        bound = sqrt(n)
+        while p <= bound:
+            while n % p == 0:
+                result.append(p)
+                cache[n] = p
+                n /= p
+                bound = sqrt(n)
             p += 2
 
-    # optimization for prime n
-    if n != 1:
-        result.append(n)
+        if n > 1:
+            result.append(n)
 
-    return result
+        assert result == sorted(result), str(result)
+        return result
+    return factorize
 
-def numDivisors(n):
-    primes = factorize(n)
-    histogram = defaultdict(int)
-    for factor in primes:
-        histogram[factor] += 1
-    return reduce(mul, [exponent + 1 for exponent in list(histogram.values())])
+factorize = _factorize()
 
-def isPrime(num):
-    if num == 2 or num == 3:
-        return True
-    if num % 2 == 0:
-        return False
-    if num % 3 == 0:
-        return False
+def num_factors(n):
+    if n == 1:
+        return 1
+    return product([exponent + 1 for exponent in Counter(factorize(n)).values()])
 
-    return numDivisors(num) == 2
+def divisors(n):
+    primes = Counter(factorize(n))
+    # todo finish
 
-class _AbstractPrimeTest:
-    def isPrime(self, n):
-        raise 'Not implemented.'
+class _Prime(object):
 
-    def nextPrime(self, n):
-        raise 'Not implemented.'
+    SIEVE_JUMP = 1000
 
-    def getPrimes(self, max):
-        raise 'Not implemented.'
-
-    def getType(self):
-        raise 'Not implemented.'
-
-class _EratosthenesPrimeTest(_AbstractPrimeTest):
     def __init__(self):
-        self._primes = [2, 3]
-        self._primeSet = set(self._primes)
-    
-    def getType(self):
-        return 'eratosthenes'
+        self.reset(100)
 
-    def isPrime(self, n):
-        if n >= self._primes[-1]:
-            self._generatePrimes(2 * n)
-        return n in self._primeSet
+    def reset(self, start):
+        self.primes = set([2])
+        self.max_prime = [2]
+        self.extend(start, jump=0)
 
-    def nextPrime(self, n):
-        if not self.isPrime(n):
-            return None
-        if n >= self._primes[-1]:
-            self._generatePrimes(2 * n)
-        return self._primes[self._primes.index(n) + 1]
-    
-    def getPrimes(self, max):
-        self._generatePrimes(max)
-        return [prime for prime in self._primes if prime <= max]
+    def extend(self, num, jump=SIEVE_JUMP):
+        for _ in self.extend_it(num, jump):
+            pass
 
-    def _generatePrimes(self, max): 
-        if max <= self._primes[-1]:
-            return
-        offset = self._primes[-1] + 1 # first number
-        sieve = [True for i in range(offset, max + 1)]
-        for prime in self._primes:    
-            self._doSieve(sieve, prime, offset)
-        prime = offset
-        while prime < max:
-            if sieve[prime - offset]:
-                self._doSieve(sieve, prime, offset)
-            prime += 1
-        newPrimes = [prime for prime in range(offset, max + 1) if sieve[prime - offset]]
-        self._primes += newPrimes
-        for prime in newPrimes:
-            self._primeSet.add(prime)    
-    
-    def _doSieve(self, sieve, prime, offset=0):
-        nextPrime = max(2 * prime, offset + (prime - offset % prime) % prime)
-        for multiple in range(nextPrime, len(sieve) + offset, prime):
-            sieve[multiple - offset] = False
-    
-class _SundaramPrimeTest(_AbstractPrimeTest):
-    def __init__(self):
-        self._halves = [1]
-        self._halvesSet = set(self._halves)
-    
-    def getType(self):
-        return 'sundaram'
+    def extend_it(self, num, jump=SIEVE_JUMP):
+        if num > self.max_prime[0]:
+            start = self.max_prime[0]        
 
-    def isPrime(self, n):
-        if n > 2 * self._halves[-1] + 1:
-            self._generateHalves(n)
-        if n == 2:
-            return True
-        return (n - 1) / 2.0 in self._halvesSet
+            # Initial sieve. Start the sieve at one more than the largest 
+            # known prime. For example, if max_prime is 7, sieve[0] represents 8.
+            sieve = list(repeat(True, num - start + jump))
 
-    def nextPrime(self, n):
-        half = (n - 1) / 2
-        if not self.isPrime(n):
-            return None
-        if half >= self._halves[-1]:
-            self._generateHalves(n)
-        if n == 2:
-            return 3
-        return 1 + 2 * self._halves[self._halves.index(half) + 1]
+            # Filter all multiples of known primes.
+            for p in self.primes:
+                for mult in range(((start-1) / p + 1) * p, num + 1 + jump, p):
+                    sieve[mult - start - 1] = False
 
-    def getPrimes(self, max):
-        self._generateHalves(max / 2)
-        return [2] + [2 * half + 1 for half in self._halves if 2 * half + 1 <= max]
+            # Filter multiples of newly discovered primes in the sieve's range.
+            for idx in range(len(sieve)):
+                if not sieve[idx]:
+                    continue
+                p = idx + 1 + start
+                for mult in range(2 * p, num + 1 + jump, p):
+                    sieve[mult - start - 1] = False
 
-    def _generateHalves(self, half):
-        halves = [True for i in xrange(half + 1)]
-        for i in xrange(1, half + 1):
-            for j in xrange(i, (half - i) / (2 * i + 1) + 1):
-                if i + j + 2 * i * j <= half:
-                    halves[i + j + 2 * i * j - 1] = False
-        self._halves = [p for p in range(1, half + 1) if halves[p - 1]]
-        self._halvesSet = set(self._halves)
+            # Add newly discovered primes to our list.
+            for idx in range(len(sieve)):
+                if not sieve[idx]:
+                    continue
+                p = idx + 1 + start
+                self.primes.add(p)
+                self.max_prime[0] = p
+                yield p
 
-def getPrimeTest(type):
-    if type == 'eratosthenes':
-       return _EratosthenesPrimeTest() 
-    elif type == 'sundaram':
-        return _SundaramPrimeTest()
-    return None
+    def is_prime(self, num):
+        self.extend(num)
+        return num in self.primes
+
+    def prime_it(self, start=2):
+        self.reset(start)
+        if start <= 2:
+            yield 2
+        inc = self.SIEVE_JUMP
+        while True:
+            success = False
+            for p in self.extend_it(self.max_prime[0] + inc):
+                success = True
+                yield p
+            if not success:
+                inc *= 2
+            else:
+                inc = self.SIEVE_JUMP
+
+
+_p = _Prime()
+is_prime = _p.is_prime
+prime_it = _p.prime_it
