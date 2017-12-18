@@ -1,7 +1,7 @@
 from math import sqrt
 from collections import defaultdict, Counter
 from functools import wraps
-from itertools import repeat
+from itertools import repeat, chain
 
 PRIMES_100 = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
 
@@ -73,23 +73,17 @@ def divisors(n):
 
 class _Prime(object):
 
-    SIEVE_JUMP = 1000
+    SIEVE_JUMP = 20
 
     def __init__(self):
-        self.reset(100)
-
-    def reset(self, start):
         self.primes = set([2])
-        self.max_prime = [2]
-        self.extend(start, jump=0)
+        self.iter = [2]
+        self.max_prime = 2
+        self.extend(100, jump=0)
 
     def extend(self, num, jump=SIEVE_JUMP):
-        for _ in self.extend_it(num, jump):
-            pass
-
-    def extend_it(self, num, jump=SIEVE_JUMP):
-        if num > self.max_prime[0]:
-            start = self.max_prime[0]        
+        if num > self.max_prime:
+            start = self.max_prime        
 
             # Initial sieve. Start the sieve at one more than the largest 
             # known prime. For example, if max_prime is 7, sieve[0] represents 8.
@@ -113,29 +107,32 @@ class _Prime(object):
                 if not sieve[idx]:
                     continue
                 p = idx + 1 + start
+                self.iter.append(p)
                 self.primes.add(p)
-                self.max_prime[0] = p
-                yield p
+                self.max_prime = p
 
     def is_prime(self, num):
         self.extend(num)
         return num in self.primes
 
     def prime_it(self, start=2):
-        self.reset(start)
-        if start <= 2:
-            yield 2
+        self.extend(start)
         inc = self.SIEVE_JUMP
+        cur = 0
+        while self.iter[cur] < start:
+            cur += 1
+            
         while True:
-            success = False
-            for p in self.extend_it(self.max_prime[0] + inc):
-                success = True
-                yield p
-            if not success:
-                inc *= 2
-            else:
-                inc = self.SIEVE_JUMP
+            # Yield everything we can.
+            while cur < len(self.iter):
+                yield self.iter[cur]
+                cur += 1
 
+            # Increase inc until we get more primes.
+            while cur >= len(self.iter):
+                self.extend(self.max_prime + inc)
+                inc *= 2
+            inc = self.SIEVE_JUMP
 
 _p = _Prime()
 is_prime = _p.is_prime

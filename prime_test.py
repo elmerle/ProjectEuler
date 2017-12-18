@@ -20,5 +20,8 @@ class PrimeTest(unittest.TestCase):
         for p, it in izip(primes[10:], util.prime_it(31)):
             self.assertEquals(p, it)
 
+    def test_both(self):
+        pass
+
 if __name__ == '__main__':
     unittest.main()
