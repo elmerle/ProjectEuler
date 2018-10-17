@@ -1,12 +1,55 @@
-from math import sqrt
+from math import sqrt, factorial
 from collections import defaultdict, Counter
 from functools import wraps
-from itertools import repeat, chain
+from itertools import repeat, chain, count
 
 PRIMES_100 = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
 
-def product(vals):
-    return reduce(lambda x, y: x * y, vals)
+def cube(n):
+    root = int(n ** (1./3) + .9)
+    return root ** 3 == n
+
+def sq(n):
+    root = int(n ** .5 + .9)
+    return root ** 2 == n 
+
+# M*n-N (M=1000, N=111, L=3)
+# L = 3 ** l
+# M = 10 ** L
+# N = int('1' * L)
+def repunit(n, M=None, N=None, L=None):
+    L = L or 3 ** (len(str(n)) - 1)
+    M = M or 10 ** L
+    N = N or int('1' * L)
+    ones = 1
+    ret = 1
+    first = []
+    sfirst = set()
+    for i in range(L):
+        first.append(ones)
+        sfirst.add(ones)
+        if ones == 0:
+            return ret
+        ones = (10 * ones + 1) % n
+        ret += 1        
+    while True:
+        if ones in sfirst:
+            return ret - first.index(ones) - 1 
+        ones = (M * ones + N) % n
+        ret += L
+
+def gcd(n, m):
+    while m != 0:
+        n, m = m, n % m
+    return n
+
+def c(n, m):
+    return factorial(n) / factorial(m) / factorial(n-m)
+
+def prod(vals):
+    if vals:
+        return reduce(lambda x, y: x * y, vals)
+    return 1
 
 def palindrome(num):
     return str(num) == str(num)[::-1]
@@ -27,36 +70,81 @@ def divisors(n):
         if n % i == 0:
             yield i
 
+def is_prime_dumb(n):
+    if n <= 1:
+        return False
+    if n in (2,3,5,7):
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+    for i in xrange(6, min(int(sqrt(n))+2, n), 6):
+        if n % (i-1) == 0 or n % (i+1) == 0:
+            return False
+    return True
+
 def _factorize():
     cache = {}
-    def factorize(n):
+    @memoize
+    def factorize(n_):
+        if n_ == 1:
+            return []
+
+        n = n_
         result = []
         bound = sqrt(n)
-        for p in PRIMES_100:
-            if p > bound:
-                break
-            while n % p == 0:
+
+        if n in cache:
+            while n in cache:
+                p = cache[n]
                 result.append(p)
                 n /= p
-        p = 101
-        while n in cache:
-            p = cache[n]
-            result.append(p)
-            n /= p
+            assert n == 1
+        else:
+            #print 'f', n_
+            for p in chain([2,3], count(5, 6)):
 
-        bound = sqrt(n)
-        while p <= bound:
-            while n % p == 0:
-                result.append(p)
-                cache[n] = p
-                n /= p
-                bound = sqrt(n)
-            p += 2
+                if p > bound:
+                    break
+                while n % p == 0: 
+                    result.append(p)
+                    cache[n] = p
+                    n /= p
 
-        if n > 1:
-            result.append(n)
+                    if n in cache:
+                        while n in cache:
+                            p = cache[n]
+                            result.append(p)
+                            n /= p
+                        assert n == 1
+                    
+                    bound = sqrt(n)
 
-        assert result == sorted(result), str(result)
+                if p > 3:
+                    p += 2
+                    if p > bound:
+                        break
+                    while n % p == 0: 
+                        result.append(p)
+                        cache[n] = p
+                        n /= p
+
+                        if n in cache:
+                            while n in cache:
+                                p = cache[n]
+                                result.append(p)
+                                n /= p
+                            assert n == 1
+                        
+                        bound = sqrt(n)
+
+            if n > 1:
+                result.append(n)
+                cache[n] = n
+
+            if len(result) == 1:
+                cache[n_] = result[0]
+
+        #assert result == sorted(result), str(n_) + str(cache) + str(result)
         return result
     return factorize
 
@@ -73,7 +161,7 @@ def divisors(n):
 
 class _Prime(object):
 
-    SIEVE_JUMP = 20
+    SIEVE_JUMP = 1000
 
     def __init__(self):
         self.primes = set([2])

@@ -6,21 +6,33 @@ primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67
 
 class PrimeTest(unittest.TestCase):
 
-    def test_is_prime(self):
+    def test_is_prime_dumb(self):
+        ps = set()
+        with open('primes.txt') as f:
+            for line in f:
+                for p in line.strip().split():
+                    ps.add(int(p))
+        for i in range(2, 104731):
+            if i in ps:
+                self.assertTrue(util.is_prime_dumb(i), i)
+            else:
+                self.assertFalse(util.is_prime_dumb(i), i) 
+
+    def _test_is_prime(self):
         for i in range(2, primes[-1]):
             if i in primes:
                 self.assertTrue(util.is_prime(i), i)
             else:
                 self.assertFalse(util.is_prime(i), i)   
 
-    def test_prime_it(self):
+    def _test_prime_it(self):
         for p, it in izip(primes, util.prime_it()):
             self.assertEquals(p, it)
 
         for p, it in izip(primes[10:], util.prime_it(31)):
             self.assertEquals(p, it)
 
-    def test_both(self):
+    def _test_both(self):
         pass
 
 if __name__ == '__main__':
