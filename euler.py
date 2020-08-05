@@ -4,33 +4,35 @@ from itertools import product, repeat, count, permutations, combinations
 from math import sqrt, factorial
 from fractions import Fraction
 
-def d(p):
-    seen = set()
-    n = 1
-    while n not in seen:
-        seen.add(n)
-        n = (n * 10 + 1) % p 
-
-
 def main():
-    is_prime(100100)
+    print(p134())
 
-    ps = []
+# Problems before p134 are lost to time. 
+# And I don't feel like going back and re-solving all of them
+# just for completeness.
 
-    for p in prime_it():
-        if p > 100000:
+def p134():
+    s = 0
+    q = 5
+
+    is_prime(1000100)
+
+    def solve(q, p):
+        pten = 10 ** len(str(q))
+        return (p - q) * mod_inv(p, pten) % p
+
+    for p in prime_it(7):
+        n = int(str(solve(q, p)) + str(q))
+        s += n
+
+        q = p
+        if p > 1000000:
             break
-        if p in (2, 5):
-            continue
-        a = repunit(p)
-        if set(factorize(a)) <= set([2, 5]):
-            pass
-        else:
-            ps.append(p)
 
-    print ps, sum(ps)
-
+    return s
 
 if __name__ == '__main__':
     main()
+
+
 

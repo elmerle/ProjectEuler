@@ -6,7 +6,7 @@ from itertools import repeat, chain, count
 PRIMES_100 = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
 
 def cube(n):
-    root = int(n ** (1./3) + .9)
+    root = int(n ** (1/3) + .9)
     return root ** 3 == n
 
 def sq(n):
@@ -17,6 +17,7 @@ def sq(n):
 # L = 3 ** l
 # M = 10 ** L
 # N = int('1' * L)
+# ??????
 def repunit(n, M=None, N=None, L=None):
     L = L or 3 ** (len(str(n)) - 1)
     M = M or 10 ** L
@@ -43,8 +44,23 @@ def gcd(n, m):
         n, m = m, n % m
     return n
 
+def gcd_ex(n, m):
+    (_r, r) = (n, m)
+    (_s, s) = (1, 0)
+    (_t, t) = (0, 1)
+    while r != 0:
+        q = _r // r
+        (_r, r) = (r, _r - q * r)
+        (_s, s) = (s, _s - q * s)
+        (_t, t) = (t, _t - q * t)
+
+    return _r, _s, _t 
+
+def mod_inv(mod, n):
+    return gcd_ex(n, mod)[1] % mod
+
 def c(n, m):
-    return factorial(n) / factorial(m) / factorial(n-m)
+    return factorial(n) // factorial(m) // factorial(n-m)
 
 def prod(vals):
     if vals:
@@ -97,7 +113,7 @@ def _factorize():
             while n in cache:
                 p = cache[n]
                 result.append(p)
-                n /= p
+                n //= p
             assert n == 1
         else:
             #print 'f', n_
@@ -108,13 +124,13 @@ def _factorize():
                 while n % p == 0: 
                     result.append(p)
                     cache[n] = p
-                    n /= p
+                    n //= p
 
                     if n in cache:
                         while n in cache:
                             p = cache[n]
                             result.append(p)
-                            n /= p
+                            n //= p
                         assert n == 1
                     
                     bound = sqrt(n)
@@ -126,13 +142,13 @@ def _factorize():
                     while n % p == 0: 
                         result.append(p)
                         cache[n] = p
-                        n /= p
+                        n //= p
 
                         if n in cache:
                             while n in cache:
                                 p = cache[n]
                                 result.append(p)
-                                n /= p
+                                n //= p
                             assert n == 1
                         
                         bound = sqrt(n)
@@ -179,7 +195,7 @@ class _Prime(object):
 
             # Filter all multiples of known primes.
             for p in self.primes:
-                for mult in range(((start-1) / p + 1) * p, num + 1 + jump, p):
+                for mult in range(((start-1) // p + 1) * p, num + 1 + jump, p):
                     sieve[mult - start - 1] = False
 
             # Filter multiples of newly discovered primes in the sieve's range.
