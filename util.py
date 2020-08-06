@@ -10,14 +10,14 @@ def cube(n):
     return root ** 3 == n
 
 def sq(n):
-    root = int(n ** .5 + .9)
+    root = int(n ** .5)
     return root ** 2 == n 
 
 # M*n-N (M=1000, N=111, L=3)
 # L = 3 ** l
 # M = 10 ** L
 # N = int('1' * L)
-# ??????
+# ?????? no clue what this does
 def repunit(n, M=None, N=None, L=None):
     L = L or 3 ** (len(str(n)) - 1)
     M = M or 10 ** L
@@ -81,11 +81,13 @@ def memoize(fn):
     
     return wrapper
 
-def divisors(n):
-    for i in range(1, n):
+def divisors_dumb(n):
+    for i in range(1, n+1):
         if n % i == 0:
             yield i
 
+# A dumb one-off prime number checker for problems that don't need to cache results.
+# All primes besides 2 and 3 are either -1 or 1 mod 6, so this just checks all numbers -1 or 1 mod 6 for divisibility.
 def is_prime_dumb(n):
     if n <= 1:
         return False
@@ -93,74 +95,45 @@ def is_prime_dumb(n):
         return True
     if n % 2 == 0 or n % 3 == 0:
         return False
-    for i in xrange(6, min(int(sqrt(n))+2, n), 6):
+    for i in range(6, min(int(sqrt(n))+2, n), 6):
         if n % (i-1) == 0 or n % (i+1) == 0:
             return False
     return True
 
 def _factorize():
+    # Build a tree of known first divisors
     cache = {}
-    @memoize
     def factorize(n_):
         if n_ == 1:
             return []
 
         n = n_
         result = []
-        bound = sqrt(n)
+        bound = int(sqrt(n))
+        is_prime(bound)
 
-        if n in cache:
+        def cached_prime(n):
             while n in cache:
                 p = cache[n]
                 result.append(p)
                 n //= p
-            assert n == 1
-        else:
-            #print 'f', n_
-            for p in chain([2,3], count(5, 6)):
+            return n
 
-                if p > bound:
-                    break
-                while n % p == 0: 
-                    result.append(p)
-                    cache[n] = p
-                    n //= p
+        for p in prime_it():
+            if p > bound: 
+                break
+            while n % p == 0:
+                result.append(p)
+                cache[n] = p
+                n //= p
 
-                    if n in cache:
-                        while n in cache:
-                            p = cache[n]
-                            result.append(p)
-                            n //= p
-                        assert n == 1
-                    
-                    bound = sqrt(n)
+                n = cached_prime(n)
+                bound = int(sqrt(n))
 
-                if p > 3:
-                    p += 2
-                    if p > bound:
-                        break
-                    while n % p == 0: 
-                        result.append(p)
-                        cache[n] = p
-                        n //= p
+        if n > 1:
+            result.append(n)
+            cache[n] = n
 
-                        if n in cache:
-                            while n in cache:
-                                p = cache[n]
-                                result.append(p)
-                                n //= p
-                            assert n == 1
-                        
-                        bound = sqrt(n)
-
-            if n > 1:
-                result.append(n)
-                cache[n] = n
-
-            if len(result) == 1:
-                cache[n_] = result[0]
-
-        #assert result == sorted(result), str(n_) + str(cache) + str(result)
         return result
     return factorize
 
@@ -173,7 +146,14 @@ def num_factors(n):
 
 def divisors(n):
     primes = Counter(factorize(n))
-    # todo finish
+    factors = [1]
+    for p, exp in primes.items():
+        new_factors = []
+        for i in range(exp + 1):
+            for f in factors:
+                new_factors.append(f * (p**i))
+        factors = new_factors
+    return factors    
 
 class _Prime(object):
 
